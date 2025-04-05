@@ -7,3 +7,4 @@ pycoingecko==2.3.0
 python-dotenv==1.0.1
 firebase-admin==6.4.0
 redis==5.0.3
+google-generativeai==0.3.2
