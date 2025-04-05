@@ -18,53 +18,63 @@ const ContentCreator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
   const { toast } = useToast();
-  const handleGenerate = async() => {
-    
-    if (!prompt) {
+
+  const handleGenerate = async () => {
+    // Validate form input
+    if (!prompt.content || !prompt.type) {
       toast({
-        title: "Please enter a prompt",
+        title: "Missing information",
         description:
-          "You need to provide some context for the AI to generate content.",
+          "Please provide both a topic and select a content type.",
         variant: "destructive",
       });
-      const response = await fetch("http://localhost:8000/", {
+      return;
+    }
+
+    try {
+      // Set loading state
+      setIsGenerating(true);
+      
+      // Make API call to backend
+      const response = await fetch("http://localhost:8000/generate-content/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           topic: prompt.content,
-          format_type: prompt.type,
-          tone:prompt.tone,
+          format: prompt.type
         })
       });
+      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      // Parse response data
       const data = await response.json();
-      if(data){
-         setIsGenerating(true);
+      
+      // Extract the content from the gemini field
+      if (data && data.gemini) {
+        setGeneratedContent(data.gemini);
+        toast({
+          title: "Content generated!",
+          description: "Your AI-powered content is ready to review and publish.",
+        });
+      } else {
+        throw new Error("Invalid response format from server");
       }
-      return;
-    }
-    // In a real implementation, this would call an API
-    // For demo purposes, we'll simulate a delay and generate fake content
-    setTimeout(() => {
-      let content = "";
-
-      if (prompt.type === "twitter") {
-        content = `1/ Here's what you need to know about the latest DeFi development 🧵\n\n2/ The TVL in DeFi protocols has increased by 15% over the past month, signaling renewed confidence in the ecosystem.\n\n3/ Major innovations in Layer 2 solutions are reducing gas fees and improving user experience.\n\n4/ This trend is likely to continue as adoption increases. #DeFi #Crypto`;
-      } else if (prompt.type === "blog") {
-        content = `# The Future of DeFi: Beyond Traditional Finance\n\nDecentralized Finance has evolved significantly in recent years, moving from simple token swaps to complex financial instruments. This article explores the latest trends and what they mean for investors.\n\n## Key Developments\n\n- Cross-chain liquidity solutions\n- Real-world asset tokenization\n- Institutional DeFi adoption\n\nAs we move forward, expect to see more integration between traditional finance and DeFi platforms, creating a more accessible financial ecosystem for everyone.`;
-      } else if (prompt.type === "telegram") {
-        content = `📣 DEFI MARKET UPDATE 📣\n\nEthereum layer 2 solutions seeing massive growth with Arbitrum and Optimism leading the charge!\n\n💰 ETH Price: $3,724\n⚡ Gas: 15 Gwei\n🏦 Total TVL: $78.3B\n\nTop Gainers:\n- @ArbitrumFoundation +12%\n- @OptimismFND +8.5%\n- @AaveAave +6.2%\n\nKey events to watch this week:\n- Ethereum Shanghai upgrade\n- Uniswap v4 announcement\n- MakerDAO governance vote`;
-      }
-
-      setGeneratedContent(content);
-      setIsGenerating(false);
-
+    } catch (error) {
+      console.error("Error generating content:", error);
       toast({
-        title: "Content generated!",
-        description: "Your AI-powered content is ready to review and publish.",
+        title: "Error generating content",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
       });
-    }, 2000);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopy = () => {
@@ -125,7 +135,9 @@ const ContentCreator = () => {
                     <label className="text-sm font-medium mb-2 block">
                       Content Tone
                     </label>
-                    <Select value={prompt.tone} onValueChange={(value) => setPrompt({ ...prompt, tone: value })}
+                    <Select 
+                      value={prompt.tone === "" ? undefined : prompt.tone}
+                      onValueChange={(value) => setPrompt({ ...prompt, tone: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select tone" />
@@ -157,7 +169,7 @@ const ContentCreator = () => {
                 </div>
                 <Button
                   onClick={handleGenerate}
-                  disabled={isGenerating || !prompt}
+                  disabled={isGenerating || !prompt.content || !prompt.type}
                   className="w-full bg-brand-purple hover:bg-brand-purple/90"
                 >
                   {isGenerating ? (

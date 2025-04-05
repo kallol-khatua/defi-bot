@@ -18,7 +18,7 @@ def get_market_insights(token: str = Query("ETH")):
 
         # DeFi trend scraping
         defi_data = cg.get_coins_markets(vs_currency="usd", category="decentralized-finance-defi")
-        top_defi_tokens = [coin["name"] for coin in defi_data[:5]]
+        top_defi_tokens = [coin["name"] for coin in defi_data[:]]
 
         return {
             "timestamp": datetime.utcnow().isoformat() + "Z",
